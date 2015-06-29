@@ -1,0 +1,78 @@
+import re
+from drf_nested_fields.serializers import NestedFieldsSerializerMixin
+
+
+def copy_meta_attributes(source_meta, target_meta):
+    for attr_key in source_meta.__dict__.keys():
+        if attr_key.startswith("_") or hasattr(target_meta, attr_key):
+            continue
+        attr_value = source_meta.__dict__[attr_key]
+        setattr(target_meta, attr_key, attr_value)
+
+
+class CustomFieldsMixin(object):
+    always_included_fields = ["id"]
+
+    __GET_FIELDS_PATTERN = re.compile(r"([a-zA-Z0-9_-]+?)\.fields\((.*?)\)\Z")
+
+    def get_serializer_class(self):
+        serializer_class = super(CustomFieldsMixin, self).get_serializer_class()
+
+        custom_field_serializer_class = self.__get_custom_field_serializer_class(serializer_class)
+        if custom_field_serializer_class:
+            return custom_field_serializer_class
+
+        return serializer_class
+
+    def __get_custom_field_serializer_class(self, base_serializer_class):
+        if not issubclass(base_serializer_class, NestedFieldsSerializerMixin):
+            return None
+
+        request = self.get_serializer_context().get('request')
+        if not request or not 'fields' in request.query_params:
+            return None
+
+        custom_fields_str = request.query_params['fields']
+        custom_fields, custom_nested_fields = self.__get_custom_fields(custom_fields_str)
+
+        class CustomFieldSerializer(base_serializer_class):
+            class Meta:
+                fields = custom_fields
+                nested_fields = custom_nested_fields
+                exclude = None
+
+            copy_meta_attributes(base_serializer_class.Meta, Meta)
+
+        return CustomFieldSerializer
+
+    def __get_custom_fields(self, custom_fields_str):
+        custom_nested_fields = dict()
+        custom_fields = []
+        splitted_custom_field_strs = self.__split_custom_fields(custom_fields_str)
+        for custom_field_str in splitted_custom_field_strs:
+            sub_fields_match = self.__GET_FIELDS_PATTERN.search(custom_field_str)
+            if sub_fields_match:
+                field_name = sub_fields_match.group(1)
+                custom_nested_fields[field_name] = self.__get_custom_fields(sub_fields_match.group(2))
+            else:
+                custom_fields.append(custom_field_str)
+        return self.always_included_fields + custom_fields, custom_nested_fields
+
+    @staticmethod
+    def __split_custom_fields(custom_fieldsStr):
+        parenthesis_ounter = 0
+        splitted_custom_field_strs = []
+        found_custom_field = ""
+
+        for char in custom_fieldsStr:
+            if char == "(":
+                parenthesis_ounter += 1
+            if char == ")":
+                parenthesis_ounter -= 1
+            if char == "," and parenthesis_ounter == 0:
+                splitted_custom_field_strs.append(found_custom_field)
+                found_custom_field = ""
+                continue
+            found_custom_field += char
+        splitted_custom_field_strs.append(found_custom_field)
+        return splitted_custom_field_strs
