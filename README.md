@@ -16,18 +16,18 @@ Extension for Django REST Framework 3 which allows for defining custom field ser
 In addition to the standard Django REST Framework Meta attribute *depth*, this framework provides the possibility to explicitly define which fields should be serialized. This can be achieved for the following model in two ways:
 
 	class RelatedResource1(models.Model):
-    name = models.CharField(max_length=255)
-    active = models.BooleanField(default=True)
+    	name = models.CharField(max_length=255)
+    	active = models.BooleanField(default=True)
 
 	class RelatedResource2(models.Model):
-    name = models.CharField(max_length=255)
-    active = models.BooleanField(default=True)
-    related_resources_1 = models.ManyToManyField(RelatedResource1)
+    	name = models.CharField(max_length=255)
+    	active = models.BooleanField(default=True)
+    	related_resources_1 = models.ManyToManyField(RelatedResource1)
 
 	class TestResource(models.Model):
-    related_resource_1 = models.ForeignKey(RelatedResource1)
-    related_resource_2 = models.OneToOneField(RelatedResource2)
-    name = models.CharField(max_length=255)
+    	related_resource_1 = models.ForeignKey(RelatedResource1)
+    	related_resource_2 = models.OneToOneField(RelatedResource2)
+    	name = models.CharField(max_length=255)
 		
 	
 
