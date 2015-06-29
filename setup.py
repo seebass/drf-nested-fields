@@ -3,10 +3,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='drf-nested-fields',
-    version="0.9.0",
+    version="0.9.1",
     url='https://github.com/seebass/drf-nested-fields',
     license='MIT',
-    description='Nested fields extension for Django REST Framework 3.',
+    description='Nested fields extension for Django REST Framework 3',
     author='Sebastian Bredehöft',
     author_email='bredehoeft.sebastian@gmail.com',
     packages=find_packages(exclude=['tests*']),

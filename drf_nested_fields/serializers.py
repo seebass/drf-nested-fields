@@ -9,9 +9,12 @@ class NestedFieldsSerializerMixin(object):
     Addional Meta field `nested_fields` to explicitly define serialized fields with following structure
     {"field1": (["field11"], {"nested_field12": (["field121"], {})})}
     """
+    nested_serializer_class = None
 
     def __init__(self, instance=None, data=empty, **kwargs):
         super(NestedFieldsSerializerMixin, self).__init__(instance, data, **kwargs)
+        if not self.nested_serializer_class:
+            self.nested_serializer_class = self.__class__
         self.__add_nested_fields_to_fields()
 
     def build_field(self, field_name, info, model_class, nested_depth):
@@ -20,7 +23,7 @@ class NestedFieldsSerializerMixin(object):
         return super(NestedFieldsSerializerMixin, self).build_field(field_name, info, model_class, nested_depth)
 
     def build_nested_field(self, field_name, relation_info, nested_depth):
-        class NestedSerializer(self.__class__):
+        class NestedSerializer(self.nested_serializer_class):
             class Meta:
                 model = relation_info.related_model
                 depth = nested_depth - 1
