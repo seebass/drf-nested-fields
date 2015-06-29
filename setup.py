@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
 setup(
-    name='djangorestframework',
+    name='drf-nested-fields',
     version="0.9.0",
     url='https://github.com/seebass/drf-nested-fields',
     license='MIT',
