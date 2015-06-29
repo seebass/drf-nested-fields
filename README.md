@@ -34,20 +34,20 @@ In addition to the standard Django REST Framework Meta attribute *depth*, this f
 1. Use **NestedFieldsSerializerMixin** and set the Meta attribute **nested_fields** on the serializer.
 		
 		class TestResourceSerializer(NestedFieldsSerializerMixin, ModelSerializer):
-		class Meta:
-        	model = TestResource
-        	fields = ('id', 'name', 'related_resource_1')
-        	nested_fields = {
-            	'related_resource_2': (
-                	['name'],
-                	{
-                   		'related_resources_1': (
-                       		['id', 'name'],
-                        	{}
-                    	)
-                	}
-                )
-        	}
+			class Meta:
+        		model = TestResource
+        		fields = ('id', 'name', 'related_resource_1')
+        		nested_fields = {
+            		'related_resource_2': (
+                		['name'],
+                		{
+                   			'related_resources_1': (
+                       			['id', 'name'],
+                        		{}
+                    		)
+                		}
+                	)
+        		}
 	Result:
 		
 		[
