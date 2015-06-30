@@ -1,4 +1,7 @@
 import re
+from django.db.models.fields.related import SingleRelatedObjectDescriptor, ReverseManyRelatedObjectsDescriptor, \
+    ForeignRelatedObjectsDescriptor, ReverseSingleRelatedObjectDescriptor
+from django.db.models.fields.related import ManyRelatedObjectsDescriptor
 from drf_nested_fields.serializers import NestedFieldsSerializerMixin
 
 
@@ -23,6 +26,19 @@ class CustomFieldsMixin(object):
             return custom_field_serializer_class
 
         return serializer_class
+
+    def get_queryset(self):
+        """
+        For reducing the query count the queryset is expanded with `prefetch_related` and `select_related` depending on the
+        specified fields and nested fields
+        """
+        self.queryset = super(CustomFieldsMixin, self).get_queryset()
+        serializer_class = self.get_serializer_class()
+        if hasattr(serializer_class.Meta, 'nested_fields'):
+            nested_fields = serializer_class.Meta.nested_fields
+            fields = serializer_class.Meta.fields
+            self._expand_queryset(fields, nested_fields, self.queryset.model)
+        return self.queryset
 
     def __get_custom_field_serializer_class(self, base_serializer_class):
         if not issubclass(base_serializer_class, NestedFieldsSerializerMixin):
@@ -76,3 +92,50 @@ class CustomFieldsMixin(object):
             found_custom_field += char
         splitted_custom_field_strs.append(found_custom_field)
         return splitted_custom_field_strs
+
+    def _expand_queryset(self, fields, nested_fields, model, prefix='', parent_prefetched=False):
+        for field_name in (f for f in fields if f not in nested_fields):
+            field = getattr(model, field_name, None)
+            if not field:
+                continue
+            if isinstance(field, (ReverseSingleRelatedObjectDescriptor, SingleRelatedObjectDescriptor)):
+                self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
+            elif isinstance(field, (ForeignRelatedObjectsDescriptor, ReverseManyRelatedObjectsDescriptor,
+                                    ManyRelatedObjectsDescriptor)):
+                self._add_many_related_field_to_query(prefix, field_name)
+        for field_name in nested_fields:
+            field = getattr(model, field_name, None)
+            if not field:
+                continue
+            related_model = None
+            if isinstance(field, SingleRelatedObjectDescriptor):
+                related_model = field.related.related_model
+                self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
+            elif isinstance(field, ReverseSingleRelatedObjectDescriptor):
+                related_model = field.field.related_model
+                self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
+            elif isinstance(field, ForeignRelatedObjectsDescriptor):
+                related_model = field.related.related_model
+                self._add_many_related_field_to_query(prefix, field_name)
+                parent_prefetched = True
+            elif isinstance(field, ManyRelatedObjectsDescriptor):
+                related_model = field.related.model
+                self._add_many_related_field_to_query(prefix, field_name)
+                parent_prefetched = True
+            elif isinstance(field, ReverseManyRelatedObjectsDescriptor):
+                related_model = field.field.related_model
+                self._add_many_related_field_to_query(prefix, field_name)
+                parent_prefetched = True
+
+            if related_model:
+                self._expand_queryset(nested_fields[field_name][0], nested_fields[field_name][1], related_model,
+                                      field_name + '__', parent_prefetched)
+
+    def _add_single_related_field_to_query(self, prefix, field_name, parent_prefetched):
+        if parent_prefetched:
+            self.queryset = self.queryset.prefetch_related(prefix + field_name)
+        else:
+            self.queryset = self.queryset.select_related(prefix + field_name)
+
+    def _add_many_related_field_to_query(self, prefix, field_name):
+        self.queryset = self.queryset.prefetch_related(prefix + field_name)

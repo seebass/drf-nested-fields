@@ -53,4 +53,3 @@ class NestedFieldsTest(TestCase):
         self.assertEqual(self.nested_related_resource_1_1.active, nested_related_resources_data[0]['active'])
         self.assertEqual(self.nested_related_resource_1_2.id, nested_related_resources_data[1]['id'])
         self.assertEqual(self.nested_related_resource_1_2.active, nested_related_resources_data[1]['active'])
-
