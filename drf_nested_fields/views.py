@@ -129,7 +129,7 @@ class CustomFieldsMixin(object):
 
             if related_model:
                 self._expand_queryset(nested_fields[field_name][0], nested_fields[field_name][1], related_model,
-                                      field_name + '__', parent_prefetched)
+                                      prefix + field_name + '__', parent_prefetched)
 
     def _add_single_related_field_to_query(self, prefix, field_name, parent_prefetched):
         if parent_prefetched:
