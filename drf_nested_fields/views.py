@@ -16,12 +16,12 @@ def copy_meta_attributes(source_meta, target_meta):
 class CustomFieldsMixin(object):
     always_included_fields = ["id"]
 
-    __GET_FIELDS_PATTERN = re.compile(r"([a-zA-Z0-9_-]+?)\.fields\((.*?)\)\Z")
+    _GET_FIELDS_PATTERN = re.compile(r"([a-zA-Z0-9_-]+?)\.fields\((.*?)\)\Z")
 
     def get_serializer_class(self):
         serializer_class = super(CustomFieldsMixin, self).get_serializer_class()
 
-        custom_field_serializer_class = self.__get_custom_field_serializer_class(serializer_class)
+        custom_field_serializer_class = self._get_custom_field_serializer_class(serializer_class)
         if custom_field_serializer_class:
             return custom_field_serializer_class
 
@@ -40,7 +40,7 @@ class CustomFieldsMixin(object):
             self._expand_queryset(fields, nested_fields, self.queryset.model)
         return self.queryset
 
-    def __get_custom_field_serializer_class(self, base_serializer_class):
+    def _get_custom_field_serializer_class(self, base_serializer_class):
         if not issubclass(base_serializer_class, NestedFieldsSerializerMixin):
             return None
 
@@ -49,7 +49,7 @@ class CustomFieldsMixin(object):
             return None
 
         custom_fields_str = request.query_params['fields']
-        custom_fields, custom_nested_fields = self.__get_custom_fields(custom_fields_str)
+        custom_fields, custom_nested_fields = self._get_custom_fields(custom_fields_str)
 
         class CustomFieldSerializer(base_serializer_class):
             class Meta:
@@ -61,15 +61,15 @@ class CustomFieldsMixin(object):
 
         return CustomFieldSerializer
 
-    def __get_custom_fields(self, custom_fields_str):
+    def _get_custom_fields(self, custom_fields_str):
         custom_nested_fields = dict()
         custom_fields = []
         splitted_custom_field_strs = self.__split_custom_fields(custom_fields_str)
         for custom_field_str in splitted_custom_field_strs:
-            sub_fields_match = self.__GET_FIELDS_PATTERN.search(custom_field_str)
+            sub_fields_match = self._GET_FIELDS_PATTERN.search(custom_field_str)
             if sub_fields_match:
                 field_name = sub_fields_match.group(1)
-                custom_nested_fields[field_name] = self.__get_custom_fields(sub_fields_match.group(2))
+                custom_nested_fields[field_name] = self._get_custom_fields(sub_fields_match.group(2))
             else:
                 custom_fields.append(custom_field_str)
         return self.always_included_fields + custom_fields, custom_nested_fields
