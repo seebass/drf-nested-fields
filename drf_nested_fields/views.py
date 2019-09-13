@@ -1,7 +1,12 @@
 import re
-from django.db.models.fields.related import SingleRelatedObjectDescriptor, ReverseManyRelatedObjectsDescriptor, \
-    ForeignRelatedObjectsDescriptor, ReverseSingleRelatedObjectDescriptor
-from django.db.models.fields.related import ManyRelatedObjectsDescriptor
+
+from django.db.models.fields.related_descriptors import (
+    ForwardManyToOneDescriptor,
+    ManyToManyDescriptor,
+    ReverseManyToOneDescriptor,
+    ReverseOneToOneDescriptor
+)
+
 from drf_nested_fields.serializers import NestedFieldsSerializerMixin
 
 
@@ -45,7 +50,7 @@ class CustomFieldsMixin(object):
             return None
 
         request = self.get_serializer_context().get('request')
-        if not request or not 'fields' in request.query_params:
+        if not request or 'fields' not in request.query_params:
             return None
 
         custom_fields_str = request.query_params['fields']
@@ -98,31 +103,26 @@ class CustomFieldsMixin(object):
             field = getattr(model, field_name, None)
             if not field:
                 continue
-            if isinstance(field, (ReverseSingleRelatedObjectDescriptor, SingleRelatedObjectDescriptor)):
+            if isinstance(field, (ForwardManyToOneDescriptor, ReverseOneToOneDescriptor)):
                 self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
-            elif isinstance(field, (ForeignRelatedObjectsDescriptor, ReverseManyRelatedObjectsDescriptor,
-                                    ManyRelatedObjectsDescriptor)):
+            elif isinstance(field, (ReverseManyToOneDescriptor, ManyToManyDescriptor)):
                 self._add_many_related_field_to_query(prefix, field_name)
         for field_name in nested_fields:
             field = getattr(model, field_name, None)
             if not field:
                 continue
             related_model = None
-            if isinstance(field, SingleRelatedObjectDescriptor):
+            if isinstance(field, ReverseOneToOneDescriptor):
                 related_model = field.related.related_model
                 self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
-            elif isinstance(field, ReverseSingleRelatedObjectDescriptor):
+            elif isinstance(field, ForwardManyToOneDescriptor):
                 related_model = field.field.related_model
                 self._add_single_related_field_to_query(prefix, field_name, parent_prefetched)
-            elif isinstance(field, ForeignRelatedObjectsDescriptor):
-                related_model = field.related.related_model
+            elif isinstance(field, ReverseManyToOneDescriptor):
+                related_model = field.rel.related_model
                 self._add_many_related_field_to_query(prefix, field_name)
                 parent_prefetched = True
-            elif isinstance(field, ManyRelatedObjectsDescriptor):
-                related_model = field.related.model
-                self._add_many_related_field_to_query(prefix, field_name)
-                parent_prefetched = True
-            elif isinstance(field, ReverseManyRelatedObjectsDescriptor):
+            elif isinstance(field, ManyToManyDescriptor):
                 related_model = field.field.related_model
                 self._add_many_related_field_to_query(prefix, field_name)
                 parent_prefetched = True

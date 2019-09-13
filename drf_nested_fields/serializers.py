@@ -1,5 +1,4 @@
 from rest_framework.fields import empty
-from rest_framework.serializers import ModelSerializer
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 
 
